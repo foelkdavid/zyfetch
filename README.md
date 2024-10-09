@@ -1,2 +1,2 @@
 # ⚡ zyfetch ⚡
-Sysinfo Fetcher written in Zig
+Sysinfo fetcher written in Zig.
