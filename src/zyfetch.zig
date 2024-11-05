@@ -102,11 +102,28 @@ pub fn getKernel(allocator: std.mem.Allocator) ![]const u8 {
     return try getLinePart(allocator, kernel_full_line, 2);
 }
 
-// Fetches uptime <TODO: implement formatting>
 pub fn getUptime(allocator: std.mem.Allocator) ![]const u8 {
     const uptime_full_line = try readLine(allocator, "/proc/uptime", "");
     defer allocator.free(uptime_full_line);
-    return try getLinePart(allocator, uptime_full_line, 0);
+
+    const uptime_str = try getLinePart(allocator, uptime_full_line, 0);
+    defer allocator.free(uptime_str);
+
+    const uptime_seconds = try std.fmt.parseFloat(f64, uptime_str);
+    return formatUptime(allocator, uptime_seconds);
+}
+
+fn formatUptime(allocator: std.mem.Allocator, total_seconds: f64) ![]const u8 {
+    const seconds_per_minute: f64 = 60;
+    const seconds_per_hour: f64 = 60 * seconds_per_minute;
+    const seconds_per_day: f64 = 24 * seconds_per_hour;
+
+    const days = @floor(total_seconds / seconds_per_day);
+    const hours = @floor(@mod(total_seconds, seconds_per_day) / seconds_per_hour);
+    const minutes = @floor(@mod(total_seconds, seconds_per_hour) / seconds_per_minute);
+    const seconds = @mod(total_seconds, seconds_per_minute);
+
+    return try std.fmt.allocPrint(allocator, "{d} days, {d} hours, {d} minutes, {d:.0} seconds", .{ days, hours, minutes, seconds });
 }
 
 // Fetches number of installed packages.
