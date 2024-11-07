@@ -7,6 +7,8 @@ pub fn build(b: *std.Build) void {
         .target = b.host,
     });
 
+    exe.linkLibC();
+
     b.installArtifact(exe);
 
     const run_exe = b.addRunArtifact(exe);

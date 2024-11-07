@@ -1,5 +1,9 @@
 const std = @import("std");
 
+const c = @cImport({
+    @cInclude("sys/statvfs.h");
+    @cInclude("sys/sysinfo.h");
+});
 // Gets GPU Vendor using lspci
 fn getVGAInfo(allocator: std.mem.Allocator) ![]const u8 {
     const result = try std.process.Child.run(.{
@@ -167,13 +171,43 @@ pub fn getGPU(allocator: std.mem.Allocator) ![]const u8 {
 }
 
 // Fetches memory stats
-pub fn getMemory() []const u8 {
-    return "Not Implemented";
+pub fn getMemory(allocator: std.mem.Allocator) ![]const u8 {
+    const memtotal_line = try readLine(allocator, "/proc/meminfo", "MemTotal");
+    defer allocator.free(memtotal_line);
+
+    const memtotal = try getLinePart(allocator, memtotal_line, 7);
+    defer allocator.free(memtotal);
+
+    // std.debug.print("MemTotal: {s}\n", .{memtotal});
+
+    const mem_MIB = try std.fmt.parseFloat(f64, memtotal);
+    const mem_GIB = mem_MIB / 1024 / 1024;
+    //return try allocator.dupe(u8, mem_GIB);
+
+    return try std.fmt.allocPrint(allocator, "{d:.2} GiB", .{mem_GIB});
 }
 
-// Fetches disk stats
-pub fn getDisk() []const u8 {
-    return "Not Implemented";
+pub fn getDisk(allocator: std.mem.Allocator) ![]const u8 {
+    var statvfs: c.struct_statvfs = undefined;
+    const path = "/";
+
+    if (c.statvfs(path.ptr, &statvfs) != 0) {
+        return error.StatvfsFailed;
+    }
+
+    const total_bytes: u64 = statvfs.f_frsize * statvfs.f_blocks;
+    const free_bytes: u64 = statvfs.f_frsize * statvfs.f_bfree;
+    const used_bytes: u64 = total_bytes - free_bytes;
+
+    const usage_percent: u8 = @intFromFloat(@as(f64, @floatFromInt(used_bytes)) / @as(f64, @floatFromInt(total_bytes)) * 100);
+
+    const total_gib: f64 = @as(f64, @floatFromInt(total_bytes)) / (1024 * 1024 * 1024);
+    const used_gib: f64 = @as(f64, @floatFromInt(used_bytes)) / (1024 * 1024 * 1024);
+
+    var buffer: [64]u8 = undefined;
+    const result = try std.fmt.bufPrint(&buffer, "(/): {d:.2} GiB / {d:.2} GiB ({d}%)", .{ used_gib, total_gib, usage_percent });
+
+    return try allocator.dupe(u8, result);
 }
 
 pub fn main() !void {
@@ -199,6 +233,12 @@ pub fn main() !void {
     const cpu = try getCPU(allocator);
     defer allocator.free(cpu);
 
+    const disk = try getDisk(allocator);
+    defer allocator.free(disk);
+
+    const memory = try getMemory(allocator);
+    defer allocator.free(memory);
+
     //const gpu = try getGPU(allocator);
     //defer allocator.free(gpu);
 
@@ -216,6 +256,6 @@ pub fn main() !void {
     //    try stdout.print("Terminal: {s}\n", .{getTerm()});
     try stdout.print("CPU: {s}\n", .{cpu});
     //try stdout.print("GPU: {s}\n", .{gpu});
-    try stdout.print("Memory: {s}\n", .{getMemory()});
-    try stdout.print("Disk: {s}\n", .{getDisk()});
+    try stdout.print("Memory: {s}\n", .{memory});
+    try stdout.print("Disk: {s}\n", .{disk});
 }
