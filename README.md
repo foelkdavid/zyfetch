@@ -1,5 +1,5 @@
 # ⚡ zyfetch ⚡
-Sysinfo fetcher written in Zig.
+sysinfo fetcher written in Zig.
 
 ## Try it out! (v0.0.1) [Linux]
 ```bash
