@@ -48,7 +48,7 @@ pub fn readLine(allocator: std.mem.Allocator, filepath: []const u8, starts_with:
 // Returns a defined part of a String.
 // Parts are seperated by whitespaces
 pub fn getLinePart(allocator: std.mem.Allocator, line: []const u8, part_index: usize) ![]const u8 {
-    var iter = std.mem.split(u8, line, " ");
+    var iter = std.mem.splitSequence(u8, line, " ");
     var current_index: usize = 0;
 
     while (iter.next()) |part| {
@@ -64,7 +64,7 @@ pub fn getLinePart(allocator: std.mem.Allocator, line: []const u8, part_index: u
 // Returns all content after a defined part of a String.
 // Parts are seperated by whitespaces
 pub fn getLinePartAndRest(allocator: std.mem.Allocator, line: []const u8, start_index: usize) ![]const u8 {
-    var iter = std.mem.split(u8, line, " ");
+    var iter = std.mem.splitSequence(u8, line, " ");
     var current_index: usize = 0;
     var result = std.ArrayList(u8).init(allocator);
     errdefer result.deinit();

@@ -4,7 +4,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "zyfetch",
         .root_source_file = b.path("src/zyfetch.zig"),
-        .target = b.host,
+        .target = b.graph.host,
     });
 
     exe.linkLibC();
